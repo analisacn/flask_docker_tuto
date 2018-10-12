@@ -54,9 +54,9 @@ def close_connection(connection, cur=False):
 
 
 def connect():
-    c = psycopg2.connect(host='localhost', port=5432, user='postgres',
-                          password='postgres', dbname='testdb')
 
+    c = psycopg2.connect(host='postgresql', port=5432, user='postgres',
+                          password='postgresexample', dbname='testdb')
     return c
 
 
