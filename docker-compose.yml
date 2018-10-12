@@ -1,0 +1,15 @@
+version: '3'
+services:
+
+  postgres:
+    container_name: postgresql
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: postgresexample
+      POSTGRES_DB: "testdb"
+
+  web:
+    build: .
+    ports:
+      - "5000:5000"
