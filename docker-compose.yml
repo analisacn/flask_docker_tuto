@@ -11,5 +11,7 @@ services:
 
   web:
     build: .
+    volumes:
+    - ./flask:/code
     ports:
       - "5000:5000"
