@@ -25,7 +25,7 @@ def connect():
 
 @api.route('/')
 class HelloWorld(Resource):
-    def get(self):
+    def create_table(self):
         db_conn = connect()
         cursor = db_conn.cursor()
 
@@ -39,6 +39,9 @@ class HelloWorld(Resource):
         )
         db_conn.commit()
         close_connection(db_conn, cursor=cursor)
+
+    def get(self):
+        self.create_table()
         msg = "Hello World"
         return {'msg': msg}
 
