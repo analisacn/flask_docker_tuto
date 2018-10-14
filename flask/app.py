@@ -70,7 +70,7 @@ class Users(Resource):
         exists = User().get_user(username)
 
         if exists:
-            abort(404, message=f"User {username} already exists")
+            abort(400, message=f"User {username} already exists")
 
         db_conn = connect()
         cursor = db_conn.cursor()
