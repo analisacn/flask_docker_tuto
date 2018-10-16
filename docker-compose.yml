@@ -5,14 +5,23 @@ services:
     container_name: postgresql
     image: postgres
     restart: always
+    ports:
+      - 5432:5432
     environment:
-      POSTGRES_PASSWORD: postgresexample
+      POSTGRES_PASSORD: "postgresexample"
       POSTGRES_DB: "testdb"
 
   web:
+    environment:
+      DOCS_PATH: "/docs/"
+      PG_HOST: "postgresql"
+      PG_PORT: 5432
+      PG_USER: "postgres"
+      PG_PASSWORD: "postgresexample"
+      PG_DB_NAME: "testdb"
     build: .
     volumes:
-    - ./flask:/code
+    - ./src:/code
     - ./docs:/docs
     ports:
       - "5000:5000"

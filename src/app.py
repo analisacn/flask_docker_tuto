@@ -1,61 +1,33 @@
-import psycopg2
 import os
+
 from flask import Flask
 from flask_restplus import Api, Resource, abort, reqparse
 from werkzeug.datastructures import FileStorage
 
-UPLOAD_DIRECTORY = "/docs"
+from .db import connect, close_connection, init_db
+
+UPLOAD_DIRECTORY = os.getenv("DOCS_PATH", "docs/")
 
 app = Flask(__name__)
 api = Api(app)
+
 
 post_user_parser = reqparse.RequestParser(bundle_errors=True)
 post_user_parser.add_argument('username', type=str, required=True)
 post_user_parser.add_argument('first_name', type=str, required=True)
 post_user_parser.add_argument('last_name', type=str, required=True)
 
-upload_parser = reqparse.RequestParser()
-upload_parser.add_argument('file', location='files', type=FileStorage,
-                           required=True)
-
-
-def close_connection(connection, cursor=False):
-    if cursor:
-        cursor.close()
-    connection.close()
-
-
-def connect():
-    c = psycopg2.connect(host='postgresql', port=5432, user='postgres',
-                         password='postgresexample', dbname='testdb')
-    return c
-
 
 @api.route('/')
 class HelloWorld(Resource):
-    def create_table(self):
-        db_conn = connect()
-        cursor = db_conn.cursor()
-
-        # Create a table
-        cursor.execute(
-            "CREATE TABLE IF NOT EXISTS users ("
-            "id serial PRIMARY KEY, "
-            "username text NOT NULL UNIQUE, "
-            "first_name text NOT NULL, "
-            "last_name text NOT NULL);"
-        )
-        db_conn.commit()
-        close_connection(db_conn, cursor=cursor)
 
     def get(self):
-        self.create_table()
-        msg = "Hello World"
-        return {'msg': msg}
+        return "Hello World"
 
 
 @api.route('/users')
 class Users(Resource):
+
     def get(self):
         """
         Get all users list
@@ -96,12 +68,16 @@ class Users(Resource):
 
 @api.route('/user/<username>')
 class User(Resource):
+
     def get_user(self, username):
+        """
+        Get user by username
+        """
         username = username.lower()
         db_conn = connect()
         cursor = db_conn.cursor()
         cursor.execute(f"SELECT * FROM users WHERE username = '{username}'")
-        user = cursor.fetchone()  # (1, 'analisac', 'Analisa', 'Carbone')
+        user = cursor.fetchone()
         close_connection(db_conn, cursor=cursor)
         return user
 
@@ -119,6 +95,11 @@ class User(Resource):
         return user_dict, 200
 
 
+upload_parser = reqparse.RequestParser()
+upload_parser.add_argument('file', location='files', type=FileStorage,
+                           required=True)
+
+
 @api.route('/upload/')
 class File(Resource):
 
@@ -127,29 +108,26 @@ class File(Resource):
         """
         Upload a new File
         """
-        args = upload_parser.parse_args()
-        self.save_file(args)
-
-        return {'status': 'Done'}
+        args_ = upload_parser.parse_args()
+        self.save_file(args_)
+        return 200
 
     def save_file(self, args):
         uploaded_file = args['file']
         destination = os.path.join(UPLOAD_DIRECTORY)
-        print(destination)
         if not os.path.exists(destination):
             abort(400, "Destination folder does not exist.")
-        filename = self.get_filename(destination, uploaded_file.filename)
-        xls_file = '%s%s' % (destination, filename)
-        args['file'].save(xls_file)
+        file_path = os.path.join(destination, uploaded_file.filename)
+        uploaded_file.save(file_path)
 
-    def get_filename(self, destination, filename):
-        i = 1
-        while os.path.exists("%s/%s" % (destination, filename)):
-            basename = os.path.splitext(filename)
-            filename = "%s_%i%s" % (basename[0], i, basename[1])
-            i += 1
-        return filename
+
+@api.route('/process/')
+class ProcessFile(Resource):
+
+    def post(self):
+        return 200
 
 
 if __name__ == '__main__':
+    init_db()
     app.run()
