@@ -1,6 +1,10 @@
 import psycopg2
+import os
 from flask import Flask
 from flask_restplus import Api, Resource, abort, reqparse
+from werkzeug.datastructures import FileStorage
+
+UPLOAD_DIRECTORY = "/docs"
 
 app = Flask(__name__)
 api = Api(app)
@@ -9,6 +13,10 @@ post_user_parser = reqparse.RequestParser(bundle_errors=True)
 post_user_parser.add_argument('username', type=str, required=True)
 post_user_parser.add_argument('first_name', type=str, required=True)
 post_user_parser.add_argument('last_name', type=str, required=True)
+
+upload_parser = reqparse.RequestParser()
+upload_parser.add_argument('file', location='files', type=FileStorage,
+                           required=True)
 
 
 def close_connection(connection, cursor=False):
@@ -109,6 +117,38 @@ class User(Resource):
             'last_name': user[3]
         }
         return user_dict, 200
+
+
+@api.route('/upload/')
+class File(Resource):
+
+    @api.expect(upload_parser)
+    def post(self):
+        """
+        Upload a new File
+        """
+        args = upload_parser.parse_args()
+        self.save_file(args)
+
+        return {'status': 'Done'}
+
+    def save_file(self, args):
+        uploaded_file = args['file']
+        destination = os.path.join(UPLOAD_DIRECTORY)
+        print(destination)
+        if not os.path.exists(destination):
+            abort(400, "Destination folder does not exist.")
+        filename = self.get_filename(destination, uploaded_file.filename)
+        xls_file = '%s%s' % (destination, filename)
+        args['file'].save(xls_file)
+
+    def get_filename(self, destination, filename):
+        i = 1
+        while os.path.exists("%s/%s" % (destination, filename)):
+            basename = os.path.splitext(filename)
+            filename = "%s_%i%s" % (basename[0], i, basename[1])
+            i += 1
+        return filename
 
 
 if __name__ == '__main__':

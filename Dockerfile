@@ -4,6 +4,7 @@ ENV PYTHONUNBUFFERED 1
 ENV FLASK_APP app.py
 
 RUN mkdir /code
+RUN mkdir /docs
 
 WORKDIR /code
 
