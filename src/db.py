@@ -14,13 +14,18 @@ def init_db():
 
     # Create a table
     cursor.execute(
-        "CREATE TABLE IF NOT EXISTS users ("
+        "CREATE TABLE IF NOT EXISTS files ("
         "id serial PRIMARY KEY, "
-        "username text NOT NULL UNIQUE, "
-        "first_name text NOT NULL, "
-        "last_name text NOT NULL);"
+        "filename text NOT NULL UNIQUE);"
+    )
+
+    cursor.execute(
+        "CREATE TABLE IF NOT EXISTS measurements ("
+        "id serial PRIMARY KEY,"
+        "data jsonb);"
     )
     db_conn.commit()
+
     close_connection(db_conn, cursor=cursor)
 
 
@@ -34,3 +39,4 @@ def connect():
     c = psycopg2.connect(host=PG_HOST, port=PG_PORT, user=PG_USER,
                          password=PG_PASSWORD, dbname=PG_DB_NAME)
     return c
+

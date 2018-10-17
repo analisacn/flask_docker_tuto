@@ -19,9 +19,10 @@ services:
       PG_USER: "postgres"
       PG_PASSWORD: "postgresexample"
       PG_DB_NAME: "testdb"
+      WEB_PORT: 5000
     build: .
     volumes:
-    - ./src:/code
+    - ./src:/src
     - ./docs:/docs
     ports:
       - "5000:5000"

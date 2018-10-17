@@ -1,3 +1,4 @@
-Flask
-flask-restplus
-psycopg2
+Flask==1.0.2
+flask-restplus==0.12.1
+pandas==0.23.4
+psycopg2==2.7.5
