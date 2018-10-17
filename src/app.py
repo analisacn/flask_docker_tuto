@@ -72,6 +72,7 @@ statistics_measure_parser.add_argument('to_date', type=str, required=True)
 statistics_measure_parser.add_argument('variable', type=str, required=True)
 statistics_measure_parser.add_argument('statistic_m', type=str, required=True)
 
+
 @api.route('/files/<int:file_id>/process/')
 class ProcessFile(Resource):
 
@@ -157,7 +158,7 @@ class StatisticMeasurement(Resource):
         db_conn = connect()
         cursor = db_conn.cursor()
         cursor.execute(query, (
-        args_['variable'], args_['from_date'], args_['to_date']))
+            args_['variable'], args_['from_date'], args_['to_date']))
         result = cursor.fetchone()
 
         return {f'{args_["statistic_m"]}({args_["variable"]})': result[0]}
@@ -203,7 +204,8 @@ class QualityMeasurement(Resource):
 
         db_conn = connect()
         cursor = db_conn.cursor()
-        cursor.execute(query, (args_['variable'], args_['from_date'], args_['to_date']))
+        cursor.execute(query, (
+        args_['variable'], args_['from_date'], args_['to_date']))
 
         results = cursor.fetchall()
         vals = [r for r in results if r[0] > threshold]
@@ -215,7 +217,7 @@ class QualityMeasurement(Resource):
 
             days_by_entity[entity] += 1
         return days_by_entity
-    
+
 
 def main():
     init_db()
