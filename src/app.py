@@ -18,12 +18,6 @@ upload_parser = reqparse.RequestParser()
 upload_parser.add_argument('file', location='files', type=FileStorage,
                            required=True)
 
-measurement_parser = reqparse.RequestParser()
-measurement_parser.add_argument('from_date', type=str, required=True)
-measurement_parser.add_argument('to_date', type=str, required=True)
-measurement_parser.add_argument('variable', type=str, required=True)
-measurement_parser.add_argument('statistic_m', type=str, required=True)
-
 
 @api.route('/upload/')
 class FileUpload(Resource):
@@ -72,6 +66,12 @@ class File(Resource):
         return files
 
 
+statistics_measure_parser = reqparse.RequestParser()
+statistics_measure_parser.add_argument('from_date', type=str, required=True)
+statistics_measure_parser.add_argument('to_date', type=str, required=True)
+statistics_measure_parser.add_argument('variable', type=str, required=True)
+statistics_measure_parser.add_argument('statistic_m', type=str, required=True)
+
 @api.route('/files/<int:file_id>/process/')
 class ProcessFile(Resource):
 
@@ -112,9 +112,16 @@ class ProcessFile(Resource):
         return 200
 
 
-@api.route('/measurements/')
-@api.expect(measurement_parser)
-class Measurement(Resource):
+statistics_measure_parser = reqparse.RequestParser()
+statistics_measure_parser.add_argument('from_date', type=str, required=True)
+statistics_measure_parser.add_argument('to_date', type=str, required=True)
+statistics_measure_parser.add_argument('variable', type=str, required=True)
+statistics_measure_parser.add_argument('statistic_m', type=str, required=True)
+
+
+@api.route('/statistics/')
+@api.expect(statistics_measure_parser)
+class StatisticMeasurement(Resource):
     def get(self):
         """
             Devolver un JSON con los valores por estación de una medida
@@ -140,7 +147,7 @@ class Measurement(Resource):
                    "AND (data->>'created_at')::TIMESTAMP <= %s::TIMESTAMP",
 
         }
-        args_ = measurement_parser.parse_args()
+        args_ = statistics_measure_parser.parse_args()
         query = statistic_m.get(args_['statistic_m'])
 
         if not query:
@@ -155,6 +162,60 @@ class Measurement(Resource):
 
         return {f'{args_["statistic_m"]}({args_["variable"]})': result[0]}
 
+
+quality_measure_parser = reqparse.RequestParser()
+quality_measure_parser.add_argument('from_date', type=str, required=True)
+quality_measure_parser.add_argument('to_date', type=str, required=True)
+quality_measure_parser.add_argument('variable', type=str, required=True)
+
+
+@api.route('/quality_measure/')
+@api.expect(quality_measure_parser)
+class QualityMeasurement(Resource):
+    def get(self):
+        """
+            Devolver un JSON con el número de días por estación en los que
+            se superen los umbrales de calidad de una variable en un
+            periodo temporal dado
+        """
+
+        args_ = quality_measure_parser.parse_args()
+
+        thresholds = {
+            'so2': 180,
+            'no2': 200,
+            'co': 3,
+            'o3': 200,
+            'pm10': 50,
+            'pm2_5': 40,
+        }
+        threshold = thresholds.get(args_['variable'])
+
+        if not threshold:
+            abort(400, "Unknown variable. "
+                       "Expected one of: so2, no2, co, o3, pm10, pm2_5")
+
+        query = "SELECT SUM((data->>%s)::FLOAT), data->>'id_entity' " \
+                "FROM measurements " \
+                "WHERE (data->>'created_at')::TIMESTAMP >= %s::TIMESTAMP " \
+                "AND (data->>'created_at')::TIMESTAMP <= %s::TIMESTAMP " \
+                "GROUP BY date(data->>'created_at'), data->>'id_entity'"
+
+        db_conn = connect()
+        cursor = db_conn.cursor()
+        cursor.execute(query, (args_['variable'], args_['from_date'], args_['to_date']))
+
+        results = cursor.fetchall()
+        vals = [r for r in results if r[0] > threshold]
+        days_by_entity = {}
+        for value in vals:
+            entity = value[1]
+            if entity not in days_by_entity:
+                days_by_entity[entity] = 0
+
+            days_by_entity[entity] += 1
+        return days_by_entity
+    
 
 def main():
     init_db()
