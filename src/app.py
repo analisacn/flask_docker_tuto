@@ -48,7 +48,7 @@ class FileUpload(Resource):
         """
         args_ = upload_parser.parse_args()
         self.save_file(args_)
-        return (200, "File successfully uploaded")
+        return 200
 
 
 @api.route('/files/')
@@ -79,7 +79,6 @@ class ProcessFile(Resource):
     def post(self, file_id):
         """
         Process file by filename
-        :return:
         """
         db_conn = connect()
         cursor = db_conn.cursor()
@@ -98,7 +97,7 @@ class ProcessFile(Resource):
         df = pd.read_csv(filepath, dtype='str')
 
         if df.empty:
-            return 200, "Empty file"
+            return 200
 
         json_lines = df.assign(index=df.index).to_dict(orient="records")
 
