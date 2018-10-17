@@ -18,6 +18,12 @@ upload_parser = reqparse.RequestParser()
 upload_parser.add_argument('file', location='files', type=FileStorage,
                            required=True)
 
+measurement_parser = reqparse.RequestParser()
+measurement_parser.add_argument('from_date', type=str, required=True)
+measurement_parser.add_argument('to_date', type=str, required=True)
+measurement_parser.add_argument('variable', type=str, required=True)
+measurement_parser.add_argument('statistic_m', type=str, required=True)
+
 
 @api.route('/upload/')
 class FileUpload(Resource):
@@ -104,6 +110,50 @@ class ProcessFile(Resource):
         close_connection(db_conn, cursor=cursor)
 
         return 200
+
+
+@api.route('/measurements/')
+@api.expect(measurement_parser)
+class Measurement(Resource):
+    def get(self):
+        """
+            Devolver un JSON con los valores por estación de una medida
+            estadística en un periodo temporal dado
+        """
+
+        statistic_m = {
+            'avg': "SELECT AVG((data->>%s)::FLOAT) "
+                   "FROM measurements "
+                   "WHERE (data->>'created_at')::TIMESTAMP >= %s::TIMESTAMP "
+                   "AND (data->>'created_at')::TIMESTAMP <= %s::TIMESTAMP",
+            'sum': "SELECT SUM((data->>%s)::FLOAT) "
+                   "FROM measurements "
+                   "WHERE (data->>'created_at')::TIMESTAMP >= %s::TIMESTAMP "
+                   "AND (data->>'created_at')::TIMESTAMP <= %s::TIMESTAMP",
+            'max': "SELECT MAX((data->>%s)::FLOAT) "
+                   "FROM measurements "
+                   "WHERE (data->>'created_at')::TIMESTAMP >= %s::TIMESTAMP "
+                   "AND (data->>'created_at')::TIMESTAMP <= %s::TIMESTAMP",
+            'min': "SELECT MIN((data->>%s)::FLOAT) "
+                   "FROM measurements "
+                   "WHERE (data->>'created_at')::TIMESTAMP >= %s::TIMESTAMP "
+                   "AND (data->>'created_at')::TIMESTAMP <= %s::TIMESTAMP",
+
+        }
+        args_ = measurement_parser.parse_args()
+        query = statistic_m.get(args_['statistic_m'])
+
+        if not query:
+            return abort(400, "Unknown statistic_m, "
+                              "expected one of: max, min, sum, avg")
+
+        db_conn = connect()
+        cursor = db_conn.cursor()
+        cursor.execute(query, (
+        args_['variable'], args_['from_date'], args_['to_date']))
+        result = cursor.fetchone()
+
+        return {f'{args_["statistic_m"]}({args_["variable"]})': result[0]}
 
 
 def main():
